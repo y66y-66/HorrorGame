@@ -2,14 +2,14 @@ using UnityEngine;
 
 public class FlashlightController : MonoBehaviour
 {
-    public Light flashlight;   // Spot Light を入れる
-    public KeyCode toggleKey = KeyCode.F;
+    public Light flashlight;
 
     void Update()
     {
-        if (Input.GetKeyDown(toggleKey))
+        if (Input.GetKeyDown(KeyCode.F))
         {
             flashlight.enabled = !flashlight.enabled;
         }
     }
 }
+
