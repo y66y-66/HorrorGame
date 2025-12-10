@@ -3,24 +3,9 @@ using UnityEngine.SceneManagement;
 
 public class PlayerHealth : MonoBehaviour
 {
-    void OnCollisionEnter(Collision collision)
+    public void TakeDamage(int damage)
     {
-        if (collision.gameObject.CompareTag("Enemy"))
-        {
-            GameOver();
-        }
-    }
-
-    void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("Enemy"))
-        {
-            GameOver();
-        }
-    }
-
-    void GameOver()
-    {
+        // 即死 → GameOver シーンへ
         SceneManager.LoadScene("GameOver");
     }
 }
