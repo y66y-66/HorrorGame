@@ -11,7 +11,7 @@ public class EnemyAI : MonoBehaviour
         Chase,      // 追跡中
         Patrol,     // 徘徊中 (ランダムな目的地を巡回)
         Searching,  // 最後にプレイヤーを見た場所を探している
-        Attack      // ★ NEW: 攻撃中
+        Attack      // 攻撃中
     }
 
     public AIState currentState = AIState.Patrol;
@@ -19,7 +19,7 @@ public class EnemyAI : MonoBehaviour
     // --- コンポーネント ---
     private NavMeshAgent agent;
     private Transform playerTransform; // プレイヤーのTransform
-    private Animator animator; // ★ NEW: Animatorコンポーネント
+    private Animator animator; // Animatorコンポーネント
 
     // --- 追跡設定 ---
     public float sightRange = 15f; 
@@ -29,7 +29,7 @@ public class EnemyAI : MonoBehaviour
     
     // --- 攻撃設定 ---
     [Header("Attack Settings")]
-    public float attackRange = 2f;         // 攻撃が届く最大距離
+    public float attackRange = 2f;      // 攻撃が届く最大距離
     public float attackCooldown = 2f;      // 攻撃間のクールダウン時間
     public float damageAmount = 10f;       // プレイヤーに与えるダメージ量
     private float timeSinceLastAttack;     // 最後に攻撃してからの経過時間
@@ -56,27 +56,37 @@ public class EnemyAI : MonoBehaviour
     {
         agent = GetComponent<NavMeshAgent>();
         
-        // ★ NEW: Animatorコンポーネントの取得（子オブジェクトから） ★
+        // Animatorコンポーネントの取得（子オブジェクトから）
         animator = GetComponentInChildren<Animator>(); 
 
         // プレイヤーオブジェクトをタグで検索して取得
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        
+        // ★修正点 1: playerObj の宣言後に Debug.Log を移動し、CS0103エラーを解消
         if (playerObj != null)
         {
             playerTransform = playerObj.transform;
+            Debug.Log("Player found: " + (playerObj != null)); 
         }
-        
-        // ★ NEW: 攻撃クールダウンをリセット ★
+        else
+        {
+            Debug.LogError("Player object with 'Player' tag not found!");
+        }
+
+        // 攻撃クールダウンをリセット
         timeSinceLastAttack = attackCooldown;
     }
 
     // --- メインループ ---
     void Update()
     {
+        // プレイヤーTransformが取得できていない場合は処理を中断
+        if (playerTransform == null) return; 
+
         // プレイヤーとの距離を確認
         float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
         
-        // ★ UPDATE: 攻撃タイマーを更新 ★
+        // 攻撃タイマーを更新
         timeSinceLastAttack += Time.deltaTime; 
 
         // --- ステート決定ロジック ---
@@ -85,7 +95,7 @@ public class EnemyAI : MonoBehaviour
             lastKnownPlayerPosition = playerTransform.position;
             timeSinceLostPlayer = 0f;
             
-            // ★ UPDATE: 攻撃範囲内ならAttackステートに移行 ★
+            // 攻撃範囲内ならAttackステートに移行
             if (distanceToPlayer <= attackRange)
             {
                 currentState = AIState.Attack;
@@ -99,7 +109,7 @@ public class EnemyAI : MonoBehaviour
         {
             // 追跡中に見失った場合 (Searchingステートに移行)
             currentState = AIState.Searching;
-            agent.SetDestination(lastKnownPlayerPosition);
+            // SetDestination(lastKnownPlayerPosition)は既にUpdate()の外で処理済み
         }
         
         // 現在のステートに応じた行動を実行
@@ -109,63 +119,61 @@ public class EnemyAI : MonoBehaviour
     // --- ステート処理 ---
     void HandleState()
     {
-        // ★ NEW: Animator制御ロジックをここで実行 ★
-        if (animator != null)
+        if (agent == null || animator == null) return; // コンポーネントが欠落している場合はここで終了
+
+        // 移動速度をAnimatorに渡す
+        float currentSpeed = agent.velocity.magnitude;
+        animator.SetFloat("Speed", currentSpeed); 
+
+        // 攻撃状態をリセット
+        if (currentState != AIState.Attack)
         {
-            float currentSpeed = agent.velocity.magnitude;
-            animator.SetFloat("Speed", currentSpeed); 
-            
-            // 攻撃ステートでない限り、アニメーターの攻撃フラグを解除
-            if (currentState != AIState.Attack)
-            {
-                animator.SetBool("IsAttacking", false);
-            }
+            animator.SetBool("IsAttacking", false);
         }
-        
-        // NavMeshAgentの移動速度設定
+
         switch (currentState)
         {
             case AIState.Chase:
-                agent.isStopped = false; 
-                agent.speed = chaseSpeed; // 追跡速度を設定
-                agent.SetDestination(playerTransform.position);
-                break;
-
-            case AIState.Attack:
-                agent.isStopped = true; // 停止して攻撃
-                HandleAttack(); // 攻撃処理を実行
-                break; // Attackステートではこれ以上移動しない
-
-            case AIState.Searching:
+                agent.speed = chaseSpeed; 
                 agent.isStopped = false;
-                agent.speed = patrolSpeed; // 探索中は徘徊速度
-                HandleSearching();
+                agent.SetDestination(playerTransform.position); // 追跡目的地を設定
+                break;
+            
+            case AIState.Searching:
+                agent.speed = patrolSpeed;
+                agent.isStopped = false;
+                HandleSearching(); // ★修正点 2: 探索の継続ロジックを実行
                 break;
 
             case AIState.Patrol:
+                agent.speed = patrolSpeed;
                 agent.isStopped = false;
-                agent.speed = patrolSpeed; // 徘徊速度を設定
-                HandlePatrol();
+                HandlePatrol(); // ★修正点 2: 徘徊の継続ロジックを実行
+                break;
+
+            case AIState.Attack:
+                agent.isStopped = true; 
+                HandleAttack();
+                break;
+            
+            case AIState.Idle:
+                agent.isStopped = true;
                 break;
         }
     }
 
-    // --- 攻撃モードのロジック ---
+    // EnemyAI.cs の HandleAttack() 関数 (変更なし)
     void HandleAttack()
     {
-        // 攻撃時、プレイヤーの方向に向き直る
-        RotateTowardsTarget(playerTransform.position);
+        RotateTowardsTarget(playerTransform.position); // ターゲットの方向へ回転
 
         // クールダウンが終了しているかチェック
         if (timeSinceLastAttack >= attackCooldown)
         {
-            // ★ NEW: 攻撃アニメーションをトリガー ★
-            if (animator != null)
-            {
-                animator.SetBool("IsAttacking", true); 
-            }
+            // 1. 攻撃アニメーションをトリガー
+            animator.SetBool("IsAttacking", true); 
 
-            // 攻撃を実行し、プレイヤーにダメージを与える
+            // 2. 攻撃を実行
             PerformAttack();
             
             // クールダウンタイマーをリセット
@@ -173,27 +181,13 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    // ★ NEW: 攻撃実行（ダメージ処理）の関数 ★
+    // 攻撃実行（ダメージ処理）の関数 (変更なし)
     void PerformAttack()
     {
-        // プレイヤーにダメージを与えるロジックを実装
-        
-        // プレイヤーのHealth/Damageableコンポーネントを取得する例
-        // (プレイヤー側に HealthSystem.cs のようなスクリプトが必要)
-        /*
-        PlayerHealth playerHealth = playerTransform.GetComponent<PlayerHealth>();
-        if (playerHealth != null)
-        {
-            playerHealth.TakeDamage(damageAmount);
-            Debug.Log(gameObject.name + " がプレイヤーに " + damageAmount + " ダメージを与えました。");
-        }
-        */
-        
-        // 現時点ではログ出力のみ
         Debug.Log(gameObject.name + " が攻撃を実行しました！");
     }
 
-    // ★ NEW: ターゲットの方向へ滑らかに回転する関数 ★
+    // ターゲットの方向へ滑らかに回転する関数 (変更なし)
     void RotateTowardsTarget(Vector3 targetPosition)
     {
         Vector3 direction = (targetPosition - transform.position).normalized;
@@ -204,7 +198,7 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    // --- 探索モードのロジック ---
+    // --- 探索モードのロジック --- (変更なし)
     void HandleSearching()
     {
         timeSinceLostPlayer += Time.deltaTime; 
@@ -216,7 +210,7 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    // --- 徘徊モードのロジック ---
+    // --- 徘徊モードのロジック --- (変更なし)
     void HandlePatrol()
     {
         if (IsAtDestination())
@@ -239,14 +233,14 @@ public class EnemyAI : MonoBehaviour
         }
     }
     
-    // プレイヤーの音源情報を受け取る関数
+    // プレイヤーの音源情報を受け取る関数 (変更なし)
     public void OnPlayerMadeNoise(Vector3 noisePosition, float noiseVolume)
     {
         float distanceToNoise = Vector3.Distance(transform.position, noisePosition);
         
         if (distanceToNoise <= hearingRange * noiseVolume) 
         {
-            if (currentState != AIState.Chase && currentState != AIState.Attack) // Attack中も無視
+            if (currentState != AIState.Chase && currentState != AIState.Attack)
             {
                 lastKnownPlayerPosition = noisePosition;
                 currentState = AIState.Searching;
@@ -259,7 +253,7 @@ public class EnemyAI : MonoBehaviour
 
     // --- ヘルパー関数 ---
 
-    // プレイヤーが視認範囲（距離）内にいるかチェックする関数
+    // プレイヤーが視認範囲（距離）内にいるかチェックする関数 (変更なし)
     bool CanSeePlayer(float distance)
     {
         if (distance <= sightRange)
@@ -269,7 +263,7 @@ public class EnemyAI : MonoBehaviour
         return false;
     }
 
-    // NavMesh Agentが目的地に到達したかチェック
+    // NavMesh Agentが目的地に到達したかチェック (変更なし)
     bool IsAtDestination()
     {
         if (!agent.pathPending)
@@ -285,7 +279,7 @@ public class EnemyAI : MonoBehaviour
         return false;
     }
     
-    // NavMesh上のランダムなポイントを検索する関数
+    // NavMesh上のランダムなポイントを検索する関数 (変更なし)
     bool GetRandomPoint(Vector3 center, float radius, out Vector3 result)
     {
         Vector3 randomPoint = center + UnityEngine.Random.insideUnitSphere * radius;
