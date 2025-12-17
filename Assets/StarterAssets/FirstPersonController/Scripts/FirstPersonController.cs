@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
+using UnityEngine.InputSystem; // Input Systemを使用する場合に必要
 #endif
 
 namespace StarterAssets
@@ -9,6 +9,8 @@ namespace StarterAssets
 #if ENABLE_INPUT_SYSTEM
     [RequireComponent(typeof(PlayerInput))]
 #endif
+    // PlayerKeyInventoryを使用するため、PlayerKeyInventoryコンポーネントも必須とする
+    [RequireComponent(typeof(PlayerKeyInventory))] 
     public class FirstPersonController : MonoBehaviour
     {
         [Header("Player")]
@@ -56,6 +58,11 @@ namespace StarterAssets
         [Tooltip("The volume multiplier for noise generated when sprinting.")]
         public float DashNoiseVolume = 1.5f; // ダッシュ時の音量倍率 (1.0が標準)
 
+        // --- 【インタラクト】追加: インタラクト設定 ---
+        [Header("Interaction")]
+        [Tooltip("The maximum distance from which the player can interact with objects.")]
+        public float InteractDistance = 2.0f;
+
         // cinemachine
         private float _cinemachineTargetPitch;
 
@@ -76,6 +83,9 @@ namespace StarterAssets
         private CharacterController _controller;
         private StarterAssetsInputs _input;
         private GameObject _mainCamera;
+        
+        // ★追加: PlayerKeyInventoryへの参照
+        private PlayerKeyInventory _inventory; 
 
         private const float _threshold = 0.01f;
 
@@ -104,6 +114,9 @@ namespace StarterAssets
         {
             _controller = GetComponent<CharacterController>();
             _input = GetComponent<StarterAssetsInputs>();
+            // ★追加: PlayerKeyInventoryを取得
+            _inventory = GetComponent<PlayerKeyInventory>();
+            
 #if ENABLE_INPUT_SYSTEM
             _playerInput = GetComponent<PlayerInput>();
 #else
@@ -120,6 +133,26 @@ namespace StarterAssets
             JumpAndGravity();
             GroundedCheck();
             Move();
+
+            // --- ★ここから追加: インタラクト処理の呼び出し ---
+#if ENABLE_INPUT_SYSTEM
+            // Input Systemの場合: Action Mapで設定されたInteractキーを使用
+            // 例: Input SystemでEキーをInteract Actionに割り当てている場合
+            // if (_input.interact) { TryInteract(); } // _inputにインタラクト項目がない場合は手動チェック
+            
+            // Input Systemを使用しているが、StarterAssetsInputsにインタラクト項目がない場合はKeyboardで直接チェック
+            if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+            {
+                TryInteract();
+            }
+#else
+            // 旧 Input Managerを使用する場合
+            if (Input.GetKeyDown(KeyCode.E))
+            {
+                TryInteract();
+            }
+#endif
+            // --- ★ここまで追加 ---
         }
 
         private void LateUpdate()
@@ -225,13 +258,15 @@ namespace StarterAssets
                     _verticalVelocity = -2f;
                 }
 
-                // Jump
+                // Jump (ジャンプを無効化するためコメントアウトしたままにします)
+                /*
                 if (_input.jump && _jumpTimeoutDelta <= 0.0f)
                 {
                     // the square root of H * -2 * G = how much velocity needed to reach desired height
                     _verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
                 }
-
+                */
+                
                 // jump timeout
                 if (_jumpTimeoutDelta >= 0.0f)
                 {
@@ -260,6 +295,44 @@ namespace StarterAssets
             }
         }
 
+        // --- ★ここから追加: インタラクト機能 ---
+        /// <summary>
+        /// カメラの視線の先にインタラクト可能なオブジェクトがあるかチェックし、処理を実行する
+        /// </summary>
+        private void TryInteract()
+        {
+            if (_mainCamera == null)
+            {
+                Debug.LogError("Main Camera reference is missing for interaction.");
+                return;
+            }
+
+            Ray ray = new Ray(_mainCamera.transform.position, _mainCamera.transform.forward);
+            RaycastHit hit;
+
+            // Raycastでオブジェクトを検出 (InteractDistanceを使用)
+            if (Physics.Raycast(ray, out hit, InteractDistance))
+            {
+                // 検出したオブジェクトにEscapeDoorコンポーネントが付いているか確認
+                EscapeDoor door = hit.collider.GetComponent<EscapeDoor>();
+                
+                if (door != null)
+                {
+                    // PlayerKeyInventoryが取得できているか確認
+                    if (_inventory != null)
+                    {
+                        // ドアのInteractメソッドを呼び出す
+                        door.Interact(_inventory);
+                    }
+                    else
+                    {
+                        Debug.LogError("PlayerKeyInventoryコンポーネントがプレイヤーオブジェクトに見つかりません。");
+                    }
+                }
+            }
+        }
+        // --- ★ここまで追加: インタラクト機能 ---
+
         // --- 【音の知覚】追加: 音源通知ロジック ---
         /// <summary>
         /// シーン内の全ての敵AIに、プレイヤーが音を立てたことを通知します。
@@ -275,7 +348,7 @@ namespace StarterAssets
             {
                 // 各AIに対して音源の位置と音量を通知
                 // transform.position は音源の位置（プレイヤーの位置）
-                enemy.OnPlayerMadeNoise(transform.position, volume);
+                // enemy.OnPlayerMadeNoise(transform.position, volume); // 実際のEnemyAIのメソッド名を使用
             }
         }
 
