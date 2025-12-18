@@ -265,6 +265,7 @@ namespace StarterAssets
             if (_mainCamera == null) return;
 
             Ray ray = new Ray(_mainCamera.transform.position, _mainCamera.transform.forward);
+            Debug.DrawRay(ray.origin, ray.direction * InteractDistance, Color.red, 2.0f);
             RaycastHit hit;
 
             // ★修正: 第4引数に InteractLayer を追加。これで指定レイヤーのみ反応します。
@@ -276,9 +277,12 @@ namespace StarterAssets
                 {
                     if (_inventory != null)
                     {
-                        door.Interact(_inventory);
+                        door.Interact(_inventory);return;
                     }
                 }
+
+                SlidingDoor sDoor = hit.collider.GetComponent<SlidingDoor>();
+                if (sDoor != null) { sDoor.Interact(_inventory); return; }
             }
         }
         // --- ★ここまで修正 ---

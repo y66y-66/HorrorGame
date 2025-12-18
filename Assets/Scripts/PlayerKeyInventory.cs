@@ -14,6 +14,9 @@ public class PlayerKeyInventory : MonoBehaviour
     [Tooltip("鍵の数を表示するテキストUI (TextMeshPro)")]
     public TextMeshProUGUI keyText; // ★追加
 
+    [Header("クリア演出")]
+    public GameObject clearUI; // ここにさっき作った ClearCanvas を入れる
+
     void Start()
     {
         UpdateUI(); // ゲーム開始時にUIを初期化
@@ -65,12 +68,17 @@ public class PlayerKeyInventory : MonoBehaviour
     
     public void EndGame()
     {
-        // 2秒後にシーンを再読込（少し間を置く）
-        Invoke("ReloadScene", 2f);
+    Debug.Log("ゲームクリア！");
+
+    // クリア画面を表示
+    if (clearUI != null)
+    {
+        clearUI.SetActive(true);
     }
 
-    void ReloadScene()
-    {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name); 
+    // マウスカーソルを表示し、ゲームを止める
+    Cursor.lockState = CursorLockMode.None;
+    Cursor.visible = true;
+    Time.timeScale = 0f; // ゲーム内の時間を止める
     }
 }
