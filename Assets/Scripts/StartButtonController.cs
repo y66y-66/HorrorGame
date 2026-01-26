@@ -1,10 +1,10 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class StartButtonController : MonoBehaviour
+public class StartButton : MonoBehaviour
 {
-    public void OnStartButton()
+    public void StartGame()
     {
-        SceneManager.LoadScene("SampleScene"); // ←ゲーム本編のシーン名に変更
+        SceneManager.LoadScene("SampleScene"); // ゲームシーン名
     }
 }

@@ -160,6 +160,7 @@ MonoBehaviour:
   keysCollected: 0
   requiredKeys: 3
   keyText: {fileID: 0}
+  clearUI: {fileID: 0}
 --- !u!1 &6562776351113518405
 GameObject:
   m_ObjectHideFlags: 0
@@ -406,6 +407,9 @@ MonoBehaviour:
   BottomClamp: -89
   DashNoiseVolume: 1.5
   InteractDistance: 2
+  InteractLayer:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!114 &1978471637655604388
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -555,6 +559,7 @@ MonoBehaviour:
   keysCollected: 0
   requiredKeys: 3
   keyText: {fileID: 0}
+  clearUI: {fileID: 0}
 --- !u!114 &7457363151771024845
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -659,6 +664,7 @@ MonoBehaviour:
   keysCollected: 0
   requiredKeys: 3
   keyText: {fileID: 0}
+  clearUI: {fileID: 0}
 --- !u!1 &8648283774043924829
 GameObject:
   m_ObjectHideFlags: 0

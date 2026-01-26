@@ -4,6 +4,9 @@ using System.Collections;
 
 public class EnemyAI : MonoBehaviour
 {
+
+
+
     // --- AIの状態管理 ---
     public enum AIState
     {
@@ -75,7 +78,42 @@ public class EnemyAI : MonoBehaviour
 
         // 攻撃クールダウンをリセット
         timeSinceLastAttack = attackCooldown;
+
+        ApplyDifficulty();
+
     }
+
+    // --- 難易度による敵の強さ設定 ---
+void ApplyDifficulty()
+{
+    switch (DifficultyManager.Instance.currentDifficulty)
+    {
+        case DifficultyManager.Difficulty.Easy:
+            patrolSpeed = 4.5f;
+            chaseSpeed = 7.5f;
+            sightRange = 15f;
+            searchDuration = 3f;
+            break;
+
+        case DifficultyManager.Difficulty.Normal:
+            patrolSpeed = 4.5f;
+            chaseSpeed = 9f;
+            sightRange = 20f;
+            searchDuration = 7f;
+            break;
+
+        case DifficultyManager.Difficulty.Hard:
+            patrolSpeed = 6.5f;
+            chaseSpeed = 12.0f;
+            sightRange = 25f;
+            searchDuration = 10f;
+            break;
+    }
+
+    Debug.Log("Enemy difficulty applied: " +
+        DifficultyManager.Instance.currentDifficulty);
+}
+
 
     // --- メインループ ---
     void Update()
@@ -134,11 +172,18 @@ public class EnemyAI : MonoBehaviour
         switch (currentState)
         {
             case AIState.Chase:
-                agent.speed = chaseSpeed; 
-                agent.isStopped = false;
-                agent.SetDestination(playerTransform.position); // 追跡目的地を設定
-                break;
-            
+            agent.isStopped = false;
+
+            // 本気追跡モード
+            agent.speed = chaseSpeed;
+            agent.acceleration = 50f;
+            agent.angularSpeed = 720f;
+            agent.stoppingDistance = 0.3f;
+
+            // 毎フレーム、プレイヤーの現在位置へ
+            agent.SetDestination(playerTransform.position);
+            break;
+
             case AIState.Searching:
                 agent.speed = patrolSpeed;
                 agent.isStopped = false;
