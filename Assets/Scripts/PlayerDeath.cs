@@ -4,39 +4,42 @@ using System.Collections;
 
 public class PlayerDeath : MonoBehaviour
 {
+    bool isDead = false;
     public float gameOverDelay = 1.2f;
 
     public void Die()
     {
+        Debug.Log("PlayerDeath.Die() が呼ばれた");
+
+        if (isDead) return;
+        isDead = true;
+
+        // 操作スクリプトだけ止める
+        if (TryGetComponent(
+            out StarterAssets.FirstPersonController fps))
+        {
+            fps.enabled = false;
+        }
+
         StartCoroutine(DeathSequence());
     }
 
     IEnumerator DeathSequence()
-    {
-        // 操作不能にする
-        if (TryGetComponent(out CharacterController cc))
-            cc.enabled = false;
+{
+    Debug.Log("DeathSequence 開始");
 
-        if (TryGetComponent(out Rigidbody rb))
-            rb.isKinematic = true;
+    Cursor.lockState = CursorLockMode.None;
+    Cursor.visible = true;
 
-        // カーソル表示
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+    if (Camera.main != null)
+        Camera.main.transform.localRotation = Quaternion.Euler(15f, 0, 0);
 
-        Time.timeScale = 0.1f;
-        yield return new WaitForSecondsRealtime(0.15f);
-        Time.timeScale = 1f;
+    Debug.Log("プレイヤー死亡演出中…");
 
-        Camera.main.transform.localRotation =
-        Quaternion.Euler(10f, 0, 0);
+    yield return new WaitForSeconds(gameOverDelay);
 
+    Debug.Log("GameOver シーン読み込み直前");
+    SceneManager.LoadScene("GameOver");
+}
 
-        // ここで効果音・画面演出を入れてもOK
-        Debug.Log("プレイヤー死亡演出中…");
-
-        yield return new WaitForSeconds(gameOverDelay);
-
-        SceneManager.LoadScene("GameOver");
-    }
 }

@@ -12,8 +12,22 @@ public class PlayerDeathEffect : MonoBehaviour
 
     private bool isDead = false;
 
+    void Start()
+    {
+        Debug.Log("Camera = " + mainCamera);
+        Debug.Log("FadeImage = " + fadeImage);
+
+        if (fadeImage != null)
+        {
+            fadeImage.color = new Color(0, 0, 0, 0);
+        }
+    }
+
     public void PlayDeathEffect()
     {
+
+        Debug.Log("死亡演出開始");
+        
         if (isDead) return;
         isDead = true;
 
@@ -21,32 +35,50 @@ public class PlayerDeathEffect : MonoBehaviour
     }
 
     IEnumerator DeathSequence()
+{
+    Debug.Log("DeathSequence 開始");
+
+    float elapsed = 0f;
+
+    Quaternion startRot = mainCamera.transform.rotation;
+    Quaternion targetRot =
+        startRot * Quaternion.Euler(0, 0, tiltAngle);
+
+    // --- カメラ傾け ---
+    while (elapsed < 1f)
     {
-        float timer = 0f;
-        Quaternion startRot = mainCamera.transform.rotation;
-        Quaternion targetRot =
-            startRot * Quaternion.Euler(0, 0, tiltAngle);
-
-        Color startColor = new Color(0, 0, 0, 0);
-        Color endColor = new Color(0, 0, 0, 1);
-
-        while (timer < fadeDuration)
-        {
-            timer += Time.deltaTime;
-            float t = timer / fadeDuration;
-
-            // カメラを傾ける
-            mainCamera.transform.rotation =
-                Quaternion.Slerp(startRot, targetRot, t);
-
-            // 暗転
-            fadeImage.color =
-                Color.Lerp(startColor, endColor, t);
-
-            yield return null;
-        }
-
-        // 最後に GAMEOVER へ
-        SceneManager.LoadScene("GameOver");
+        elapsed += Time.unscaledDeltaTime;
+        mainCamera.transform.rotation =
+            Quaternion.Slerp(startRot, targetRot, elapsed);
+        yield return null;
     }
+
+    // ★★★ ここ！！！ ★★★
+    Debug.Log("暗転開始（強制テスト）");
+
+    fadeImage.color = new Color(0, 0, 0, 1); // ← 強制真っ黒
+
+    yield return new WaitForSecondsRealtime(1f); // 1秒止める
+
+    Debug.Log("ここが見えたら暗転は成功");
+
+    // ↓↓↓ 以下はいったんコメントアウトでOK
+    /*
+    elapsed = 0f;
+    Color c = fadeImage.color;
+
+    while (elapsed < fadeDuration)
+    {
+        elapsed += Time.unscaledDeltaTime;
+        c.a = Mathf.Lerp(0, 1, elapsed / fadeDuration);
+        fadeImage.color = c;
+        yield return null;
+    }
+    */
+
+    SceneManager.LoadScene("GameOverScene");
+}
+
+
+
 }

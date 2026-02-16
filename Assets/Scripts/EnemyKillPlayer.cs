@@ -2,21 +2,42 @@ using UnityEngine;
 
 public class EnemyKillPlayer : MonoBehaviour
 {
-    private bool alreadyKilled = false;
+    private bool hasKilled = false;
 
     void OnTriggerEnter(Collider other)
     {
-        if (alreadyKilled) return;
+        // 二重発動防止
+        if (hasKilled) return;
+
+        // Player タグ以外は無視
         if (!other.CompareTag("Player")) return;
 
-        alreadyKilled = true;
+        hasKilled = true;
 
-        PlayerDeathEffect effect =
-            other.GetComponent<PlayerDeathEffect>();
+        Debug.Log("プレイヤー捕獲");
 
-        if (effect != null)
+        // 親オブジェクトから PlayerDeath を探す
+        PlayerDeath death =
+            other.GetComponentInParent<PlayerDeath>();
+
+        if (death != null)
         {
-            effect.PlayDeathEffect();
+            death.Die();
+        }
+        else
+        {
+            Debug.LogError("PlayerDeath が Player に付いていない！");
+        }
+
+        // 念のため敵の移動を止める
+        if (TryGetComponent(out EnemyAI ai))
+        {
+            ai.enabled = false;
+        }
+
+        if (TryGetComponent(out UnityEngine.AI.NavMeshAgent agent))
+        {
+            agent.isStopped = true;
         }
     }
 }
